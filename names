@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+. panic
+. config
+
+INF=9223372036854775807
+
+# Find last match for pattern in $title
+function lastMatch {
+    grep -Pbo "$1" <<< "$title" | tail -n 1
+}
+
+# Allow only alphanumeric, spaces and slashes, then lowercase and replace all spaces with dashes.
+function slugify {
+    sed -r 's/[^a-zA-Z0-9 \/]//g; s/.*/\L&/g; s/ +/-/g;' <<< "$1"
+}
+
+[[ -n $1 ]] || panic 'Usage: names [filename]'
+
+srcName="$1"
+baseName="${srcName##*/}"
+# typeName given by last directory, Movies or Shows.
+typeName="${srcName%/*}"
+typeName="${typeName##*/}"
+
+# Extract title from filename:
+# Remove file extension and commonly interspersed words.
+# Replace any number of spaces, dots, underscores, dashes, brackets, parenthesis and braces with single spaces.
+# Title case.
+title=$(sed -r "s/($COMMON_WORDS)//gi; s/[][ \.\_()\{\}-]+/ /g; s/.*/\L&/; s/[a-z]*/\u&/g" <<< "${baseName%.*}")
+cutPos=$INF
+# Find year.
+y=$(lastMatch '(?<= )\d{4}(?= |$)')
+year=${y#*:}
+pos=${y%:*}
+[[ -n $pos && pos -lt cutPos ]] && cutPos=$pos
+# Find resolution.
+r=$(lastMatch '(?<= )\d+P(?= |$)')
+res=${r#*:}
+pos=${r%:*}
+[[ -n $pos && pos -lt cutPos ]] && cutPos=$pos
+# If file in Shows dir, find episode and put in series dirs.
+if [[ "$typeName" = "$SHOWS_NAME" ]]; then
+  e=$(lastMatch '(?<= |^)S\d+E\d+[^ ]*')
+  episode=${e#*:}
+  pos=${e%:*}
+  if [[ -n $pos ]]; then
+        showName="${title:0:pos-1}"
+        series=${episode%E*}
+        remoteDirName="$typeName/$showName/$showName $series"
+        [[ pos -gt cutPos ]] && cutPos=$pos
+    else
+        remoteDirName="$typeName/$showName"
+    fi
+else
+    remoteDirName="$typeName"
+fi
+[[ "$remoteDirName" = "$baseName" ]] && remoteDirName='';
+# Use only the characters up to the year or resolution unless before episode.
+if [[ cutPos -lt INF ]]; then
+    cutPos=$((cutPos - 1))
+    title="${title:0:cutPos}"
+fi
+
+# Build destination filename, dstName.
+dstName="$title"
+# Add year.
+if [[ ${#year} -gt 1 ]]; then
+    title="$title ($year)"
+    dstName="$dstName $year"
+fi
+# Add resolution.
+[[ ${#res} -gt 1 ]] && dstName="$dstName $res"
+[[ $SLUG_FNAME -gt 0 ]] && dstName="$(slugify "$dstName")"
+[[ $SLUG_DIR -gt 0 ]] && remoteDirName="$(slugify "$remoteDirName")"
+# Identify subtitle files.
+extension=${srcName##*.}
+case "$extension" in
+'srt'|'sub'|'sup')
+  subtitle=1
+  dstName="$dstName.$extension";;
+*)
+  subtitle=0
+  dstName="$dstName.mp4";;
+esac
+
+echo -e "$remoteDirName\t$dstName\t$title\t$subtitle"

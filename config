@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+# SRC is the directory to scan for video files to convert.
+SRC="/home/user/video"
+# DST is the directory where the transcoded files will be saved, if this is a network share it must be connected before
+# running process-video.
+DST="/run/user/1000/gvfs/smb-share:server=nas.local,share=media"
+# SHOWS_NAME is a subdirectory within SRC. Any files in this directory will have their filenames scanned for season and
+# episode information in the form S01E03, for instance, and then be saved in subdirectories by series.
+SHOWS_NAME="Shows"
+
+# COMMON_WORDS to be removed from video titles, separated by |
+COMMON_WORDS="internal|repack|test"
+# SLUG_FILENAME whether to slugify filenames.
+SLUG_FNAME=1
+# SLUG_DIR whether to slugify directory names.
+SLUG_DIR=0
