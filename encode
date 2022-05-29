@@ -64,6 +64,7 @@ vCodec=$(probe v stream=codec_name)
 vLevel=$(probe v stream=level) # level returned without . so 4.1 = 41, 5.0 = 50
 vDuration=$(probe v format=duration)
 vBitrate=$(probe v stream=bit_rate)
+vPixFmt=$(probe v stream=pix_fmt)
 aCodec=$(probe a stream=codec_name)
 aChannels=$(probe a stream=channels)
 aBitrate=$(probe a stream=bit_rate)
@@ -77,9 +78,9 @@ fi
 
 if [[ -n $aEncode || -n $forceEncode || "$aCodec" != "aac" || $aChannels -gt 2 || $aBitrate -gt $A_MAX_BITRATE ]]
 then
-    command="$command -acodec aac -ab $aBitrate -ac 2"
+    command+=" -acodec aac -ab $aBitrate -ac 2"
 else
-    command="$command -acodec copy"
+    command+=" -acodec copy"
 fi
 
 vMaxBitrate=$(floor "$MAX_SIZE / $vDuration - $aBitrate")
@@ -94,15 +95,15 @@ then
 fi
 
 if [[ -n $vEncode || -n $forceEncode || "$vCodec" != "h264" || "$vLevel" = "5" || "$vLevel" = "51" || \
-$vBitrate -gt $vMaxBitrate ]]
+    "$vPixFmt" != "yuv420p" || $vBitrate -gt $vMaxBitrate ]]
 then
-    vBufSize=$(floor "$V_BUFFER_SECONDS * $vBitrate")
-    command="$command -vcodec h264 -profile:v high -level 41 -vb $vBitrate -maxrate $vBitrate -bufsize $vBufSize"
+    command+=" -vcodec h264 -profile:v high -level 41 -pix_fmt yuv420p"
+    command+=" -vb $vBitrate -maxrate $vBitrate -bufsize $(floor "$V_BUFFER_SECONDS * $vBitrate")"
 else
-    command="$command -vcodec copy"
+    command+=" -vcodec copy"
 fi
 
-command="$command -metadata title=\"$(escape "$title")\" \"$(escape "$newName")\""
+command+=" -metadata title=\"$(escape "$title")\" \"$(escape "$newName")\""
 
 echo "$command"
 echo
