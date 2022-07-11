@@ -8,7 +8,7 @@
 fnames=()
 while IFS= read -r -d $'\0' fName; do
     fnames+=("$fName")
-done < <(find "$SRC" -type f -regextype posix-extended -regex '.*\.(mkv|avi|mp4|m4v|srt|sub)' -printf "%P\0" | sort -z)
+done < <(find "$SRC" -type f -regextype posix-extended -regex '.*\.(mkv|avi|mp4|m4v)' -printf "%P\0" | sort -z)
 len=${#fnames[@]}
 
 echo
@@ -16,14 +16,8 @@ echo
 for (( i=0; i<len; i++ )); do
     relName=${fnames[$i]}
 
-    if IFS=$'\t' read -r -a line; then
-        dirName="${line[0]}"
-        newName="${line[1]}"
-        title="${line[2]}"
-        subtitle="${line[3]}"
-    else
-        panic "Couldn't get title"
-    fi < <(./names "$relName")
+    IFS=$'\t' read -r dirName newName title < <(./names "$relName")
+    [[ -n "$title" ]] || panic "Couldn't get title"
 
     localName="$SRC/$relName"
     remoteDirName="$DST/$dirName"
@@ -36,16 +30,11 @@ for (( i=0; i<len; i++ )); do
         echo "$localName"
         echo "$destName"
         echo
-        if (( subtitle )); then
-            # Just copy over subtitle files
-            rsync -h --progress "$localName" "$destName"
-        else
-            ./encode "$newName" "$title" "$localName" "$1" || panic "Couldn't encode"
-            echo
-            rsync -h --progress "$newName" "$destName"
-            rm "$newName"
-            echo
-        fi
+        ./encode "$newName" "$title" "$localName" "$1" || panic "Couldn't encode"
+        echo
+        rsync -h --progress "$newName" "$destName"
+        rm "$newName"
+        echo
     fi
 
 done

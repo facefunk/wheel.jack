@@ -60,6 +60,17 @@ forceEncode="$4"
 
 command="< /dev/null ffmpeg -hide_banner -y -i \"$(escape "$localName")\""
 
+subNum=0
+while IFS=$'\t' read -r subFile subTitle subLang subForced; do
+    mapNum=$((subNum+1))
+    command+=" -i \"$(escape "$subFile")\""
+    sub+=" -map $mapNum -metadata:s:s:$subNum title=\"$(escape "$subTitle")\""
+    sub+=" -metadata:s:s:$subNum language=\"$(escape "$subLang")\""
+    # TODO: Cannot successfully set disposition forced with ffmpeg 4.2.7
+    [[ -n "$subForced" ]] && sub+=" -disposition:s:$subNum +default+forced"
+    subNum=$mapNum
+done < <(./subtitles "$localName")
+
 vCodec=$(probe v stream=codec_name)
 vLevel=$(probe v stream=level) # level returned without . so 4.1 = 41, 5.0 = 50
 vDuration=$(probe v format=duration)
@@ -103,6 +114,7 @@ else
     command+=" -vcodec copy"
 fi
 
+[[ -n "$sub" ]] && command+=" -map 0 -scodec mov_text$sub"
 command+=" -metadata title=\"$(escape "$title")\" \"$(escape "$newName")\""
 
 echo "$command"

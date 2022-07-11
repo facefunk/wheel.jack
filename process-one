@@ -7,12 +7,8 @@
 localName="$1"
 relName=$(sed -r "s|^$SRC||gi" <<< "$localName")
 
-if IFS=$'\t' read -r -a line; then
-    newName="${line[1]}"
-    title="${line[2]}"
-else
-    panic "Couldn't get title"
-fi < <(./names "$relName")
+IFS=$'\t' read -r dirName newName title < <(./names "$relName")
+[[ -n "$title" ]] || panic "Couldn't get title"
 
 echo
 ./encode "$newName" "$title" "$localName" "$2" || panic "Couldn't encode"

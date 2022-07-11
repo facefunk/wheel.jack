@@ -74,14 +74,6 @@ fi
 [[ $SLUG_FNAME -gt 0 ]] && dstName="$(slugify "$dstName")"
 [[ $SLUG_DIR -gt 0 ]] && remoteDirName="$(slugify "$remoteDirName")"
 # Identify subtitle files.
-extension=${srcName##*.}
-case "$extension" in
-'srt'|'sub'|'sup')
-  subtitle=1
-  dstName="$dstName.$extension";;
-*)
-  subtitle=0
-  dstName="$dstName.mp4";;
-esac
+dstName="$dstName.mp4"
 
-echo -e "$remoteDirName\t$dstName\t$title\t$subtitle"
+echo -e "$remoteDirName\t$dstName\t$title"
