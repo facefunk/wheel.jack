@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+. panic
+
+[[ -n $1 ]] || panic 'Usage: sub-names <filename>'
+
+srcName="$1"
+dirName="${srcName%/*}"
+baseName="${srcName##*/}"
+# Chop off extension.
+jobName="${baseName%.*}"
+# Escape glob chars.
+subsName="$(printf '%q' "$jobName")*.srt"
+while IFS= read -r -d '' fName; do
+    # Everything after jobName.
+    sub="${fName##*"$jobName"}"
+    # Chop off extension.
+    sub="${sub%.*}"
+    # Replace any spaces, dots, underscores, dashes, brackets, parenthesis and braces with colons.
+    # Lower case.
+    # Trim.
+    sub=$(sed -r "s/[][ \.\_()\{\}-]/:/g; s/.*/\L&/; s/^:+|:+$//g" <<< "$sub")
+    # Split.
+    IFS=':' read -r title ext lang <<< "$sub"
+    # Default to English
+    [[ -z "$title" ]] && title="english"
+    # set lang to the first two letters of title if no lang provided.
+    [[ -z "$lang" ]] && lang=${title:0:2}
+    # Title case.
+    title=$(sed -r "s/[a-z]*/\u&/g" <<< "$title")
+    # Add extra to title.
+    [[ -n "$ext" ]] && title+=" ($ext)"
+    # Occurrence of word "forced".
+    forced=$(grep -o "forced" <<< "$ext")
+    # Line for output.
+    line="$fName\t$title\t$lang\t$forced\n"
+    # Top-load forced.
+    [[ -n "$forced" ]] && out="$line$out" || out+="$line"
+done < <(find "$dirName" -type f -name "$subsName" -print0)
+# Output lines.
+echo -ne "$out"

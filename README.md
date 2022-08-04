@@ -8,7 +8,7 @@ The source directory is scanned for video files, any that don't exist in the des
 an output format that has been tuned to the high profile, level 4.1, H.264 MPEG-4 with 1 Mb/s bitrate and 128kb/s stereo
 AAC audio format supported by XBOX 360 and many similar generation consoles and players.
 
-Videos are also renamed and retitled during the trascoding process using the following convention:
+Videos are also renamed and retitled during the transcoding process using the following convention:
 
 `/src/Movies/A.Movie.2001.1080p.mkv` would be titled "A Movie (2001)" and saved to `/dst/Movies/a-movie-2001-1080p.mp4`
 
@@ -51,3 +51,30 @@ $ ./names /path/to/video-file.mkv
 ```
 which will output the destination subdirectory, filename, title and whether the file is determined to be a subtitle file
 or not. Once you are happy with the generated name, run process-video as normal to transcode the file.
+
+## Subtitles
+Separate .srt files can be multiplexed into the output video file by placing them in the same directory as the input
+video file and naming them similarly.
+
+Given the input file `/src/Movies/A.Movie.2001.1080p.mkv` the subtitle file `/src/Movies/A.Movie.2001.1080p.English.srt`
+would be multiplexed in with the subtitle track title "English" and the language code "en". English is the default title
+and language, so it's possible to name the subtitle file simply `/src/Movies/A.Movie.2001.1080p.srt`.
+
+An additional non-word character seperated string may be provided and will appear in the resultant title in parentheses,
+therefore the subtitle file `/src/Movies/A.Movie.2001.1080p.English.cc.srt` would result in the title "English (cc)". 
+
+Setting the additional string to "forced" e.g. `/src/Movies/A.Movie.2001.1080p.English.forced.srt` will result in the
+script attempting to force the corresponding subtitle track, meaning it will be displayed by default. FFmpeg does not
+currently have the capability to force MP4 subtitles so a patched version of FFmpeg must be used to access this
+functionality, source code for such a patched version of FFmpeg is available here: 
+[github.com/facefunk/FFmpeg](https://github.com/facefunk/FFmpeg)
+
+A third and final non-word character seperated string may be appended to the subtitle file name to set the language code
+of the corresponding subtitle track when the code in question is not the same as the first two letters of the title e.g.
+`/src/Movies/A.Movie.2001.1080p.Nederlands.forced.nl.srt`, or `/src/Movies/A.Movie.2001.1080p.Nederlands..nl.srt` where
+no additional string is required.
+
+How subtitle files will be discovered and titled can be tested by running:
+```shell
+$ ./sub-names /src/Movies/A.Movie.2001.1080p.mkv
+```

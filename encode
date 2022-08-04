@@ -66,10 +66,16 @@ while IFS=$'\t' read -r subFile subTitle subLang subForced; do
     command+=" -i \"$(escape "$subFile")\""
     sub+=" -map $mapNum -metadata:s:s:$subNum title=\"$(escape "$subTitle")\""
     sub+=" -metadata:s:s:$subNum language=\"$(escape "$subLang")\""
-    # TODO: Cannot successfully set disposition forced with ffmpeg 4.2.7
+    # Forced subtitle tracks often have samples that are more than INT_MAX microseconds (35m47.48s) apart. In this case
+    # ffmpeg throws a warning and piles all the subtitles up at the beginning of the video. An easy fix to avoid this is
+    # to change the subtitle track's time base from microseconds to milliseconds. Now subtitles can be up to INT_MAX
+    # milliseconds (24d20h31m23.65s) apart.
+    sub+=" -time_base:s:$subNum 1:1000"
+    # Until my patch fixing broken mov_text forced subtitles is rolled into git.ffmpeg.org/ffmpeg.git,
+    # a version supporting forced subtitles can be found here: github.com/facefunk/FFmpeg
     [[ -n "$subForced" ]] && sub+=" -disposition:s:$subNum +default+forced"
     subNum=$mapNum
-done < <(./subtitles "$localName")
+done < <(./sub-names "$localName")
 
 vCodec=$(probe v stream=codec_name)
 vLevel=$(probe v stream=level) # level returned without . so 4.1 = 41, 5.0 = 50
