@@ -6,12 +6,12 @@
 INF=9223372036854775807
 
 # Find last match for pattern in $title
-function lastMatch {
+lastMatch() {
     grep -Pbo "$1" <<< "$title" | tail -n 1
 }
 
 # Allow only alphanumeric, spaces and slashes, then lowercase and replace all spaces with dashes.
-function slugify {
+slugify() {
     sed -r 's/[^a-zA-Z0-9 \/]//g; s/.*/\L&/g; s/ +/-/g;' <<< "$1"
 }
 

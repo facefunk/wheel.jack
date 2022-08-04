@@ -14,23 +14,23 @@ A_MAX_BITRATE=128000
 # 2 seconds is a usual happy medium.
 V_BUFFER_SECONDS=2
 
-function floor {
+floor() {
     awk "BEGIN{printf(\"%d\", $1)}"
 }
 
-function probe {
+probe() {
     ffprobe -v error -select_streams $1:0 -show_entries $2 -of default=nw=1:nk=1 "$localName"
 }
 
-function escape {
+escape() {
     sed -r 's|[$!\\`]|\\&|g' <<< "$1"
 }
 
-function notNumeric {
+notNumeric() {
     awk -v a="$1" 'BEGIN{exit(a==a+0)}'
 }
 
-function scan {
+scan() {
     ffprobe -v error -select_streams $1:0 -show_entries packet=size,duration_time "$localName" | \
     awk -v BUFFER_SECONDS="$V_BUFFER_SECONDS" 'BEGIN {
         FS="="
