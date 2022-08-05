@@ -42,8 +42,8 @@ process-video tries to determine the minimum amount of transcoding it can get aw
 file, if it gets this wrong and produces a file which isn't compatible with the target system you can force it to fully 
 transcode the file by passing the forceEncode parameter like so:
 ```shell
-$ ./process-video 1
-$ ./process-one /path/to/video-file.mkv 1
+$ ./process-video --force
+$ ./process-one --force /path/to/video-file.mkv
 ```
 If an output file is not named to your liking try editing the filename and running:
 ```shell
@@ -52,8 +52,19 @@ $ ./names /path/to/video-file.mkv
 which will output the destination subdirectory, filename, title and whether the file is determined to be a subtitle file
 or not. Once you are happy with the generated name, run process-video as normal to transcode the file.
 
+Extra arguments appended to the end of the `./process-video`, `./process-one` or `./encode` commands will be appended
+to the run FFmpeg command. So to include and title the first two existing subtitle tracks from every processed video you
+could run:
+```shell
+$ ./process-video -c:s copy -map 0:v:0 -map 0:a:0 -map 0:s:0 -map 0:s:1 -metadata:s:s:0 title="English" \
+-metadata:s:s:0 language="en" -metadata:s:s:1 title='"English (cc)"' -metadata:s:s:1 language="en"
+```
+Note that due to shell word splitting and the way that FFmpeg receives arguments, strings containing spaces or other 
+special characters must be double-quoted, as above.
+
+
 ## Subtitles
-Separate .srt files can be multiplexed into the output video file by placing them in the same directory as the input
+Separate `.srt` files can be multiplexed into the output video file by placing them in the same directory as the input
 video file and naming them similarly.
 
 Given the input file `/src/Movies/A.Movie.2001.1080p.mkv` the subtitle file `/src/Movies/A.Movie.2001.1080p.English.srt`

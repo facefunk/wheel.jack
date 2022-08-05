@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 . panic
+. args
 
 # MAX_SIZE is the maximum file size to encode videos to.
 MAX_SIZE=32000000000 # 4GB in bits
@@ -19,7 +20,7 @@ floor() {
 }
 
 probe() {
-    ffprobe -v error -select_streams $1:0 -show_entries $2 -of default=nw=1:nk=1 "$localName"
+    ffprobe -v error -select_streams $1:0 -show_entries $2 -of default=nw=1:nk=1 "$inputFile"
 }
 
 escape() {
@@ -31,7 +32,7 @@ notNumeric() {
 }
 
 scan() {
-    ffprobe -v error -select_streams $1:0 -show_entries packet=size,duration_time "$localName" | \
+    ffprobe -v error -select_streams $1:0 -show_entries packet=size,duration_time "$inputFile" | \
     awk -v BUFFER_SECONDS="$V_BUFFER_SECONDS" 'BEGIN {
         FS="="
     }
@@ -52,13 +53,15 @@ scan() {
     }'
 }
 
-[[ -n $1 && -n $2 && -n $3 ]] || panic "Usage: encode [newName] [title] [localName] [?forceEncode]"
-newName="$1"
-title="$2"
-localName="$3"
-forceEncode="$4"
+if [[ $(type -t usage) != function ]]; then
+    usage() {
+        panic "Usage:\n encode [options] <inputFile> <outputFile> <title> [FFmpeg options]\n\n" \
+            "Options:\n --force\tforce encoding"
+    }
+fi
+parseArgs 3 "$@"
 
-command="< /dev/null ffmpeg -hide_banner -y -i \"$(escape "$localName")\""
+command="< /dev/null ffmpeg -hide_banner -y -i \"$(escape "$inputFile")\""
 
 subNum=0
 while IFS=$'\t' read -r subFile subTitle subLang subForced; do
@@ -75,7 +78,7 @@ while IFS=$'\t' read -r subFile subTitle subLang subForced; do
     # a version supporting forced subtitles can be found here: github.com/facefunk/FFmpeg
     [[ -n "$subForced" ]] && sub+=" -disposition:s:$subNum +default+forced"
     subNum=$mapNum
-done < <(./sub-names "$localName")
+done < <(./sub-names "$inputFile")
 
 vCodec=$(probe v stream=codec_name)
 vLevel=$(probe v stream=level) # level returned without . so 4.1 = 41, 5.0 = 50
@@ -120,8 +123,8 @@ else
     command+=" -vcodec copy"
 fi
 
-[[ -n "$sub" ]] && command+=" -map 0 -scodec mov_text$sub"
-command+=" -metadata title=\"$(escape "$title")\" \"$(escape "$newName")\""
+[[ -n "$sub" ]] && command+=" -map 0:v:0 -map 0:a:0 -scodec mov_text$sub"
+command+=" -metadata title=\"$(escape "$title")\" $ffArgs \"$(escape "$outputFile")\""
 
 echo "$command"
 echo

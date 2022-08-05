@@ -15,7 +15,7 @@ slugify() {
     sed -r 's/[^a-zA-Z0-9 \/]//g; s/.*/\L&/g; s/ +/-/g;' <<< "$1"
 }
 
-[[ -n $1 ]] || panic 'Usage: names [filename]'
+[[ -n $1 ]] || panic 'Usage: names <filename>'
 
 srcName="$1"
 baseName="${srcName##*/}"

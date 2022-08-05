@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+parseArgs() {
+    local numArgs=$1
+    shift
+    while [[ -n "$1" ]]; do
+        if [[ "$1" = "--force" ]]; then
+            forceEncode="$1"
+        elif [[ ${#args[@]} -lt $numArgs ]]; then
+            args+=("$1")
+        else
+            break
+        fi
+        shift
+    done
+    [[ ${#args[@]} -lt $numArgs ]] && usage
+    inputFile="${args[0]}"
+    outputFile="${args[1]}"
+    title="${args[2]}"
+    ffArgs="$@"
+}

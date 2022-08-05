@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 . panic
+. args
 . config
 
-[[ -n $1 ]] || panic "Usage: process-one ${SRC}/[filename] [?forceEncode]"
-localName="$1"
-relName=$(sed -r "s|^$SRC||gi" <<< "$localName")
+usage() {
+    panic "Usage: process-one [options] <${SRC}/inputFile> [FFmpeg options]\n\nOptions:\n --force\tforce encoding"
+}
 
-IFS=$'\t' read -r dirName newName title < <(./names "$relName")
+parseArgs 1 "$@"
+IFS=$'\t' read -r dirName outputFile title < <(./names "$inputFile")
 [[ -n "$title" ]] || panic "Couldn't get title"
-
-echo
-./encode "$newName" "$title" "$localName" "$2" || panic "Couldn't encode"
+./encode $forceEncode "$inputFile" "$outputFile" "$title" $ffArgs || panic "Couldn't encode"

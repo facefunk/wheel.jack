@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
 . panic
+. args
 . config
 
 [[ -d $DST ]] || panic "Not connected to $DST"
+parseArgs 0 "$@"
 
 exec {uploads}<> <(true)
 exec {encDone}<> <(true)
@@ -12,26 +14,26 @@ exec {uplDone}<> <(true)
 encode() {
     while IFS= read -r -d $'\0' relName; do
 
-        IFS=$'\t' read -r dirName newName title < <(./names "$relName")
+        IFS=$'\t' read -r dirName outputFile title < <(./names "$relName")
         if [[ -z "$title" ]]; then
             echo "Couldn't get title"
             continue
         fi
 
-        localName="$SRC/$relName"
+        inputFile="$SRC/$relName"
         remoteDirName="$DST/$dirName"
-        destName="$remoteDirName/$newName"
-        if [[ -f "$destName" ]]; then
-            echo "Remote file exists: $dirName/$newName"
+        destFile="$remoteDirName/$outputFile"
+        if [[ -f "$destFile" ]]; then
+            echo "Remote file exists: $dirName/$outputFile"
             continue
         fi
 
         mkdir -p "$remoteDirName"
-        echo "Encoding for remote file: $dirName/$newName"
+        echo "Encoding for remote file: $dirName/$outputFile"
         echo
 
-        if ./encode "$newName" "$title" "$localName" "$1"; then
-            echo -e "$newName\t$destName" >&$uploads
+        if ./encode $forceEncode "$inputFile" "$outputFile" "$title" $ffArgs; then
+            echo -e "$outputFile\t$destFile" >&$uploads
         else
             echo "Couldn't encode"
         fi
@@ -45,9 +47,9 @@ upload() {
     while true; do
         if read -t 0 <&$uploads; then
             didUp=1
-            IFS=$'\t' read -r newName destName <&$uploads
-            echo "Uploading: $destName"
-            rsync -h --progress "$newName" "$destName" && rm "$newName"
+            IFS=$'\t' read -r outputFile destFile <&$uploads
+            echo "Uploading: $destFile"
+            rsync -h --progress "$outputFile" "$destFile" && rm "$outputFile"
 
         elif read -t 0 <&$encDone; then
             [[ $didUp -eq 1 ]] && echo "All files uploaded" || echo "Nothing to upload"
