@@ -1,6 +1,6 @@
-# process-video
+# wheel.jack
 
-process-video is a collection of BASH format shell scripts that convert a directory of video files with inconsistent 
+wheel.jack is a collection of BASH format shell scripts that convert a directory of video files with inconsistent 
 format and naming conventions to a single unified format and synchronise them to an output directory, possibly on a 
 NAS.
 
@@ -20,7 +20,7 @@ file. Slugification makes filenames a bit easier to deal with by converting them
 and replacing all spaces with dashes.
 
 ## Prerequisites
-process-video makes use of ffmpeg and rsync to install these on a Debian based system use:
+wheel.jack makes use of ffmpeg and rsync to install these on a Debian based system use:
 ```sh
 $ sudo apt install ffmpeg rsync
 ```
@@ -34,11 +34,11 @@ To transcode all new files and save them to the remote directory:
 ```shell
 $ ./process-video
 ```
-To transcode a single file and output it to the process-video directory:
+To transcode a single file and output it to the wheel.jack directory:
 ```shell
 $ ./process-one /path/to/video-file.mkv
 ```
-process-video tries to determine the minimum amount of transcoding it can get away with to produce a compatible output 
+wheel.jack tries to determine the minimum amount of transcoding it can get away with to produce a compatible output 
 file, if it gets this wrong and produces a file which isn't compatible with the target system you can force it to fully 
 transcode the file by passing the forceEncode parameter like so:
 ```shell
@@ -50,7 +50,8 @@ If an output file is not named to your liking try editing the filename and runni
 $ ./names /path/to/video-file.mkv
 ```
 which will output the destination subdirectory, filename, title and whether the file is determined to be a subtitle file
-or not. Once you are happy with the generated name, run process-video as normal to transcode the file.
+or not. Once you are happy with the generated name, run `./process-video` or `./process-one` as normal to transcode the 
+file.
 
 Extra arguments appended to the end of the `./process-video`, `./process-one` or `./encode` commands will be appended
 to the run FFmpeg command. So to include and title the first two existing subtitle tracks from every processed video you
