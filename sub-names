@@ -18,8 +18,8 @@ while IFS= read -r -d '' fName; do
     sub="${sub%.*}"
     # Replace any spaces, dots, underscores, dashes, brackets, parenthesis and braces with colons.
     # Lower case.
-    # Trim.
-    sub=$(sed -r "s/[][ \.\_()\{\}-]/:/g; s/.*/\L&/; s/^:+|:+$//g" <<< "$sub")
+    # Left trim single colon.
+    sub=$(sed -r "s/[][ \.\_()\{\}-]/:/g; s/.*/\L&/; s/^://g" <<< "$sub")
     # Split.
     IFS=':' read -r title ext lang <<< "$sub"
     # Default to English
