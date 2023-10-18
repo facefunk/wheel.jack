@@ -48,6 +48,7 @@ vLevel=$(probe v stream=level) # level returned without . so 4.1 = 41, 5.0 = 50
 vDuration=$(probe v format=duration)
 vBitrate=$(probe v stream=bit_rate)
 vPixFmt=$(probe v stream=pix_fmt)
+vWidth=$(probe v stream=width)
 aCodec=$(probe a stream=codec_name)
 aChannels=$(probe a stream=channels)
 aBitrate=$(probe a stream=bit_rate)
@@ -78,11 +79,12 @@ then
 fi
 
 if [[ -n $vEncode || -n $forceEncode || "$vCodec" != "h264" || "$vLevel" = "5" || "$vLevel" = "51" || \
-    "$vPixFmt" != "yuv420p" || $vBitrate -gt $vMaxBitrate ]]
+    "$vPixFmt" != "yuv420p" || $vWidth -gt 1920 ]]
 then
     maxRate=$(floor "$vBitrate + $aBitrate")
     command+=" -vcodec h264 -profile:v high -level 41 -pix_fmt yuv420p"
     command+=" -vb $vBitrate -maxrate $maxRate -bufsize $(floor "$V_BUFFER_SECONDS * $maxRate")"
+    [[ $vWidth -gt 1920 ]] && command+=" -vf scale=1920:-1"
 else
     command+=" -vcodec copy"
 fi
