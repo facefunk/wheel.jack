@@ -80,8 +80,9 @@ fi
 if [[ -n $vEncode || -n $forceEncode || "$vCodec" != "h264" || "$vLevel" = "5" || "$vLevel" = "51" || \
     "$vPixFmt" != "yuv420p" || $vBitrate -gt $vMaxBitrate ]]
 then
+    maxRate=$(floor "$vBitrate + $aBitrate")
     command+=" -vcodec h264 -profile:v high -level 41 -pix_fmt yuv420p"
-    command+=" -vb $vBitrate -maxrate $vBitrate -bufsize $(floor "$V_BUFFER_SECONDS * $vBitrate")"
+    command+=" -vb $vBitrate -maxrate $maxRate -bufsize $(floor "$V_BUFFER_SECONDS * $maxRate")"
 else
     command+=" -vcodec copy"
 fi
