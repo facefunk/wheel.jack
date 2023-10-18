@@ -2,6 +2,7 @@
 
 . panic
 . args
+. util
 
 # MAX_SIZE is the maximum file size to encode videos to.
 MAX_SIZE=32000000000 # 4GB in bits
@@ -14,44 +15,6 @@ A_MAX_BITRATE=128000
 # higher = more efficient compression, lower chance of blocky frames.
 # 2 seconds is a usual happy medium.
 V_BUFFER_SECONDS=2
-
-floor() {
-    awk "BEGIN{printf(\"%d\", $1)}"
-}
-
-probe() {
-    ffprobe -v error -select_streams $1:0 -show_entries $2 -of default=nw=1:nk=1 "$inputFile"
-}
-
-escape() {
-    sed -r 's|[$!\\`]|\\&|g' <<< "$1"
-}
-
-notNumeric() {
-    awk -v a="$1" 'BEGIN{exit(a==a+0)}'
-}
-
-scan() {
-    ffprobe -v error -select_streams $1:0 -show_entries packet=size,duration_time "$inputFile" | \
-    awk -v BUFFER_SECONDS="$V_BUFFER_SECONDS" 'BEGIN {
-        FS="="
-    }
-    /size/ {
-        sampleBytes+=$2
-        if(sampleDuration >= BUFFER_SECONDS) {
-            meanBitrate=sampleBytes*8/sampleDuration
-            if(meanBitrate > maxMeanBitrate) maxMeanBitrate = meanBitrate
-            sampleBytes=0
-            sampleDuration=0
-        }
-    }
-    /duration_time/ {
-        sampleDuration+=$2
-    }
-    END {
-        printf("%d\n", maxMeanBitrate)
-    }'
-}
 
 if [[ $(type -t usage) != function ]]; then
     usage() {

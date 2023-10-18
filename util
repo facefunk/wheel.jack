@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+floor() {
+    awk "BEGIN{printf(\"%d\", $1)}"
+}
+
+probe() {
+    ffprobe -v error -select_streams $1:0 -show_entries $2 -of default=nw=1:nk=1 "$inputFile"
+}
+
+escape() {
+    sed -r 's|[$!\\`]|\\&|g' <<< "$1"
+}
+
+notNumeric() {
+    awk -v a="$1" 'BEGIN{exit(a==a+0)}'
+}
+
+scan() {
+        ffprobe -v error -select_streams $1:0 -show_entries packet=size,duration_time "$inputFile" | \
+        awk -F= '/duration_time/ {duration += $2}
+        /size/ {bytes += $2}
+        END {printf("%d\n", bytes*8 / duration)}'
+}
+
+scanPeak() {
+    ffprobe -v error -select_streams $1:0 -show_entries packet=size,duration_time "$inputFile" | \
+    awk -F= -v BUFFER_SECONDS="$V_BUFFER_SECONDS" '/duration_time/ {
+        times[i] = $2
+        duration += $2
+    }
+    /size/ {
+        sizes[i++] = $2
+        bytes += $2
+        while (duration > BUFFER_SECONDS) {
+            duration -= times[s]
+            bytes -= sizes[s++]
+        }
+        rate = bytes/duration
+        if(rate > maxRate) maxRate=rate
+    }
+    END {printf("%d\n", maxRate*8)}'
+}
