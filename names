@@ -28,39 +28,43 @@ typeName="${typeName##*/}"
 # Replace any number of spaces, dots, underscores, dashes, brackets, parenthesis and braces with single spaces.
 # Title case.
 title=$(sed -r "s/($COMMON_WORDS)//gi; s/[][ \.\_()\{\}-]+/ /g; s/.*/\L&/; s/[a-z]*/\u&/g" <<< "${baseName%.*}")
-cutPos=$INF
+
 # Find year.
 y=$(lastMatch '(?<= )\d{4}(?= |$)')
 year=${y#*:}
-pos=${y%:*}
-[[ -n $pos && pos -lt cutPos ]] && cutPos=$pos
+yearPos=${y%:*}
+
 # Find resolution.
 r=$(lastMatch '(?<= )\d+P(?= |$)')
 res=${r#*:}
-pos=${r%:*}
-[[ -n $pos && pos -lt cutPos ]] && cutPos=$pos
+resPos=${r%:*}
+[[ -n $resPos && ${res:0:-1} -gt 1080 ]] && res="1080p"
+
 # If file in Shows dir, find episode and put in series dirs.
 if [[ "$typeName" = "$SHOWS_NAME" ]]; then
-  e=$(lastMatch '(?<= |^)S\d+E\d+[^ ]*')
-  episode=${e#*:}
-  pos=${e%:*}
-  if [[ -n $pos ]]; then
-        showName="${title:0:pos-1}"
+    e=$(lastMatch '(?<= |^)S\d+E\d+[^ ]*')
+    episode=${e#*:}
+    episodePos=${e%:*}
+    if [[ -n $episodePos ]]; then
+        showName="${title:0:episodePos-1}"
         series=${episode%E*}
         remoteDirName="$typeName/$showName/$showName $series"
-        [[ pos -gt cutPos ]] && cutPos=$pos
-    else
-        remoteDirName="$typeName/$showName"
     fi
 else
     remoteDirName="$typeName"
 fi
-[[ "$remoteDirName" = "$baseName" ]] && remoteDirName='';
-# Use only the characters up to the year or resolution unless before episode.
-if [[ cutPos -lt INF ]]; then
+
+# Use only the characters up to the year or resolution unless year before episode.
+[[ $episodePos -gt $yearPos || -n $resPos && $resPos -lt $yearPos || -z $yearPos ]] && cutPos=$resPos || cutPos=$yearPos
+[[ -z $cutPos ]] && cutPos=$episodePos
+if [[ -n $cutPos ]]; then
     cutPos=$((cutPos - 1))
     title="${title:0:cutPos}"
 fi
+
+# Ensure correct remoteDir
+[[ -z "$remoteDirName" ]] && remoteDirName="$typeName/$title"
+[[ "$remoteDirName" = "$baseName" ]] && remoteDirName='';
 
 # Build destination filename, dstName.
 dstName="$title"
@@ -69,11 +73,13 @@ if [[ ${#year} -gt 1 ]]; then
     title="$title ($year)"
     dstName="$dstName $year"
 fi
+
 # Add resolution.
 [[ ${#res} -gt 1 ]] && dstName="$dstName $res"
+
+# Slugify
 [[ $SLUG_FNAME -gt 0 ]] && dstName="$(slugify "$dstName")"
 [[ $SLUG_DIR -gt 0 ]] && remoteDirName="$(slugify "$remoteDirName")"
-# Identify subtitle files.
-dstName="$dstName.mp4"
 
+dstName="$dstName.mp4"
 echo -e "$remoteDirName\t$dstName\t$title"
