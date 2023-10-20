@@ -31,11 +31,11 @@ while IFS= read -r -d '' fName; do
     # Add extra to title.
     [[ -n "$ext" ]] && title+=" ($ext)"
     # Occurrence of word "forced".
-    forced=$(grep -o "forced" <<< "$ext")
+    [[ -n $(grep -o "forced" <<< "$ext") ]] && forced=1 || forced=0
     # Line for output.
     line="$fName\t$title\t$lang\t$forced\n"
     # Top-load forced.
-    [[ -n "$forced" ]] && out="$line$out" || out+="$line"
+    [[ $forced -gt 0 ]] && out="$line$out" || out+="$line"
 done < <(find "$dirName" -type f -name "$subsName" -print0)
 # Output lines.
 echo -ne "$out"

@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+
+. panic
+. args
+. util
+. config
+
+usage() {
+    panic 'Usage: subs <filename>'
+}
+
+parseArgs 1 "$@"
+
+# Read subtitles from video file into array subs, so that any srt files present may override the corresponding subtitle
+# stream.
+subs=()
+subNum=0
+while IFS=$',' read -r index forced lang title; do
+    lang="$(lower "${lang:0:2}")"
+    # Check against SUB_LANGS for acceptable languages.
+    for ((i=0; i<${#SUB_LANGS[@]}; i+=2)); do
+        sLang="${SUB_LANGS[$i]}"
+        if [[ "$lang" = "$sLang" ]]; then
+            sTitle="${SUB_LANGS[$((i+1))]}"
+            if [[ $forced -gt 0 ]]; then
+                sTitle+=" (forced)"
+            else
+                title="$(lower "$(escape "$title")")"
+                title="$(space "${title/$(lower "$sTitle")/}")"
+                [[ -n $title ]] && sTitle+=" ($title)"
+            fi
+            subs[$subNum]="0:$index,$forced,en,$sTitle"
+            subNum=$((subNum+1))
+        fi
+    done
+done < <(probe s stream=index:disposition=forced:stream_tags=language,title)
+
+# Check for srt files.
+mapNum=1
+inputs=" "
+while IFS=$'\t' read -r subFile subTitle subLang subForced; do
+    # Inputs must be specified before outputs, so need to be output separately.
+    inputs+=" -i \"$(escape "$subFile")\""
+
+    sub="$mapNum,$subForced,$(escape "$subLang"),$(escape "$subTitle")"
+    mapNum=$((mapNum+1))
+
+    for s in "${!subs[@]}"; do
+        IFS=$',' read -r map forced lang title <<< "${subs[$s]}"
+        if [[ "$title" = "$subTitle" ]]; then
+            subs[$s]="$sub"
+            continue 2
+        fi
+    done
+
+    subs[$subNum]="$sub"
+    subNum=$((subNum+1))
+
+done < <(./sub-names "$inputFile")
+
+for s in "${!subs[@]}"; do
+    IFS=$',' read -r map forced lang title <<< "${subs[$s]}"
+
+    maps+=" -map $map -metadata:s:s:$s title=\"$title\" -metadata:s:s:$s language=\"$lang\""
+    # Forced subtitle tracks often have samples that are more than INT_MAX microseconds (35m47.48s) apart. In this case
+    # ffmpeg throws a warning and piles all the subtitles up at the beginning of the video. An easy fix to avoid this is
+    # to change the subtitle track's time base from microseconds to milliseconds. Now subtitles can be up to INT_MAX
+    # milliseconds (24d20h31m23.65s) apart.
+    [[ ! "$map" =~ ":" ]] && maps+=" -time_base:s:$s 1:1000"
+    # Until my patch fixing broken mov_text forced subtitles is rolled into git.ffmpeg.org/ffmpeg.git,
+    # a version supporting forced subtitles can be found here: github.com/facefunk/FFmpeg
+    [[ forced -gt 0 ]] && maps+=" -disposition:s:$s +default+forced"
+done
+
+echo -ne "$inputs\t$maps"

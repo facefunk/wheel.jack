@@ -24,34 +24,14 @@ if [[ $(type -t usage) != function ]]; then
 fi
 parseArgs 3 "$@"
 
-command="< /dev/null ffmpeg -hide_banner -y -i \"$(escape "$inputFile")\""
+IFS=$'\t' read -r subInputs subMaps < <(./subs "$inputFile")
+command="< /dev/null ffmpeg -hide_banner -y -i \"$(escape "$inputFile")\"$subInputs"
 
-subNum=0
-while IFS=$'\t' read -r subFile subTitle subLang subForced; do
-    mapNum=$((subNum+1))
-    command+=" -i \"$(escape "$subFile")\""
-    sub+=" -map $mapNum -metadata:s:s:$subNum title=\"$(escape "$subTitle")\""
-    sub+=" -metadata:s:s:$subNum language=\"$(escape "$subLang")\""
-    # Forced subtitle tracks often have samples that are more than INT_MAX microseconds (35m47.48s) apart. In this case
-    # ffmpeg throws a warning and piles all the subtitles up at the beginning of the video. An easy fix to avoid this is
-    # to change the subtitle track's time base from microseconds to milliseconds. Now subtitles can be up to INT_MAX
-    # milliseconds (24d20h31m23.65s) apart.
-    sub+=" -time_base:s:$subNum 1:1000"
-    # Until my patch fixing broken mov_text forced subtitles is rolled into git.ffmpeg.org/ffmpeg.git,
-    # a version supporting forced subtitles can be found here: github.com/facefunk/FFmpeg
-    [[ -n "$subForced" ]] && sub+=" -disposition:s:$subNum +default+forced"
-    subNum=$mapNum
-done < <(./sub-names "$inputFile")
-
-vCodec=$(probe v stream=codec_name)
-vLevel=$(probe v stream=level) # level returned without . so 4.1 = 41, 5.0 = 50
-vDuration=$(probe v format=duration)
-vBitrate=$(probe v stream=bit_rate)
-vPixFmt=$(probe v stream=pix_fmt)
-vWidth=$(probe v stream=width)
-aCodec=$(probe a stream=codec_name)
-aChannels=$(probe a stream=channels)
-aBitrate=$(probe a stream=bit_rate)
+# Order of vars determined by ffprobe.
+# level returned without . so 4.1 = 41, 5.0 = 50
+IFS=$',' read -r vCodec vWidth vPixFmt vLevel vBitrate < <(probe v:0 stream=codec_name,level,bit_rate,pix_fmt,width)
+vDuration=$(probe v:0 format=duration)
+IFS=$',' read -r aCodec aChannels aBitrate < <(probe a:0 stream=codec_name,channels,bit_rate)
 
 notNumeric "$aBitrate" && aBitrate=$(scan a)
 if notNumeric "$aBitrate" || [[ $aBitrate -gt $A_MAX_BITRATE ]]
@@ -89,7 +69,7 @@ else
     command+=" -vcodec copy"
 fi
 
-[[ -n "$sub" ]] && command+=" -map 0:v:0 -map 0:a:0 -scodec mov_text$sub"
+[[ -n "$subMaps" ]] && command+=" -map 0:v:0 -map 0:a:0 -scodec mov_text$subMaps"
 command+=" -metadata title=\"$(escape "$title")\" $ffArgs \"$(escape "$outputFile")\""
 
 echo "$command"

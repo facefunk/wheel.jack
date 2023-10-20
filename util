@@ -5,7 +5,7 @@ floor() {
 }
 
 probe() {
-    ffprobe -v error -select_streams $1:0 -show_entries $2 -of default=nw=1:nk=1 "$inputFile"
+    ffprobe -v error -select_streams $1 -show_entries $2 -of csv=p=0 "$inputFile"
 }
 
 escape() {
@@ -40,4 +40,14 @@ scanPeak() {
         if(rate > maxRate) maxRate=rate
     }
     END {printf("%d\n", maxRate*8)}'
+}
+
+# Allow only alphanumeric, spaces and slashes, then lowercase.
+lower() {
+    sed -r 's/[^a-zA-Z0-9 \/]//g; s/.*/\L&/g' <<< "$1"
+}
+
+# Replace multiple contiguous spaces with single spaces and trim space.
+space() {
+    sed -r 's/ +/ /g; s/(^ | $)//g' <<< "$1"
 }

@@ -15,3 +15,7 @@ COMMON_WORDS="internal|repack|test"
 SLUG_FNAME=1
 # SLUG_DIR whether to slugify directory names.
 SLUG_DIR=0
+
+# SUB_LANGS is an array of 2-letter language code and language title pairs. Any subtitles contained within the input
+# video file with matching language codes will be included in the output.
+SUB_LANGS=("en" "English")
